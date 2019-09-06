@@ -12,7 +12,7 @@ def create_timeserie_monofield(rep, field, pattern=None):
 def find_monofield_files(rep, field, pattern=None):
     """ find all files in directory rep for field field with optional
     pattern"""
-    files = glob.glob(rep + '/' + f'**/*{field}.nc', recursive=True)
+    files = glob.glob(rep + '/' + f'**/*.{field}.nc', recursive=True)
     matches = []
     if pattern is not None:
         for f in files:
