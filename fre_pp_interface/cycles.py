@@ -4,16 +4,20 @@ import datetime as dt
 import cftime
 
 
-def merge_2_cycles(files_cycle1, files_cycle2):
+def merge_2_cycles(files_cycle1, files_cycle2, combine='by_coords'):
     """merge files from 2 cycles into one single dataset:
     deal with repeating time axis in 2 cycles"""
-    ds1 = xr.open_mfdataset(files_cycle1, combine='by_coords',
-                            decode_times=False)
-    ds2 = xr.open_mfdataset(files_cycle2, combine='by_coords',
-                            decode_times=False)
+    if combine == 'nested':
+        kwargs = {'concat_dim': 'time'}
+    else:
+        kwargs = {}
+    ds1 = xr.open_mfdataset(files_cycle1, combine=combine,
+                            decode_times=False, **kwargs)
+    ds2 = xr.open_mfdataset(files_cycle2, combine=combine,
+                            decode_times=False, **kwargs)
     # time is given in days since origin
-    ndays_cycle1 = ds1['time'][-1] - ds1['time'][0]
-    ndays_cycle2 = ds2['time'][-1] - ds2['time'][0]
+    ndays_cycle1 = ds1['time'][-1].values - ds1['time'][0].values
+    ndays_cycle2 = ds2['time'][-1].values - ds2['time'][0].values
     # we always come short of the last year
     nyears_cycle1 = np.ceil(ndays_cycle1/365 + 1)
     nyears_cycle2 = np.ceil(ndays_cycle2/365 + 1)
@@ -44,3 +48,11 @@ def merge_2_cycles(files_cycle1, files_cycle2):
     ds['time'] = xr.DataArray(data=timedata, attrs={'units': units,
                                                     'calendar': calendar_cycle1})
     return ds
+
+
+#def merge_cycles(list_of_cycles):
+    # loop from the end of list
+    #ncycles = len(list_of_cycles)
+    # nmerge = ncyles - 1
+    # for cycle in np.arange(ncycles, 1, -1):
+        # out = merge_2_cycles(list_of_cycles[cycle-1], list_of_cycles[cycle])
