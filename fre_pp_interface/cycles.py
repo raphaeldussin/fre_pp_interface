@@ -15,6 +15,12 @@ def merge_2_cycles(files_cycle1, files_cycle2, combine='by_coords'):
                             decode_times=False, **kwargs)
     ds2 = xr.open_mfdataset(files_cycle2, combine=combine,
                             decode_times=False, **kwargs)
+    ds = merge_2_datasets(ds1, ds2)
+    return ds
+
+
+def merge_2_datasets(ds1, ds2):
+    """ merge 2 datasets into one long """
     # time is given in days since origin
     ndays_cycle1 = ds1['time'][-1].values - ds1['time'][0].values
     ndays_cycle2 = ds2['time'][-1].values - ds2['time'][0].values
@@ -46,13 +52,25 @@ def merge_2_cycles(files_cycle1, files_cycle2, combine='by_coords'):
                                calendar=calendar_cycle1)
 
     ds['time'] = xr.DataArray(data=timedata, attrs={'units': units,
-                                                    'calendar': calendar_cycle1})
+                                                    'calendar': calendar_cycle1}, dims='time')
     return ds
 
 
-#def merge_cycles(list_of_cycles):
+def merge_cycles(list_of_cycles, combine='by_coords'):
+    """ recursively call merge_2_cycles """
+    if combine == 'nested':
+        kwargs = {'concat_dim': 'time'}
+    else:
+        kwargs = {}
     # loop from the end of list
-    #ncycles = len(list_of_cycles)
-    # nmerge = ncyles - 1
-    # for cycle in np.arange(ncycles, 1, -1):
-        # out = merge_2_cycles(list_of_cycles[cycle-1], list_of_cycles[cycle])
+    ncycles = len(list_of_cycles)
+    # init to last cycle
+    dsend = xr.open_mfdataset(list_of_cycles[-1], combine=combine,
+                              decode_times=False, **kwargs)
+    for cycle in np.arange(ncycles-1,0,-1):
+        dsstart = xr.open_mfdataset(list_of_cycles[cycle-1], combine=combine,
+                                    decode_times=False, **kwargs)
+        # merge
+        dsend = merge_2_datasets(dsstart, dsend)
+
+    return dsend
