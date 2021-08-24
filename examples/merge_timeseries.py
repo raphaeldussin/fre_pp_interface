@@ -138,7 +138,7 @@ sp.check_call(create_dmget_string(files_6), shell=True)
 print("dmget done")
 
 # open all files in a single dataset using time fixes from fre_pp_interface
-ds =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6])
+ds =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6], gaps=[1,1,1,0,0])
 
 # now that we have the time axis concatenated, we can decode it in cftime
 ds = xr.decode_cf(ds)
