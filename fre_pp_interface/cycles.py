@@ -62,10 +62,10 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1+gap)*ndpy,
                                   units, calendar=calendar_cycle1)
     # we can now concatenate the datasets
-    print('concatenate')
+    #print('concatenate')
     #print(origin)
-    print(ds1['time'].min(), ds1['time'].max())
-    print(ds2['time'].min(), ds2['time'].max())
+    #print(ds1['time'].min(), ds1['time'].max())
+    #print(ds2['time'].min(), ds2['time'].max())
     ds = xr.concat([ds1, ds2], dim='time')
     # finally re-encode the time variable (else get garbage in output netcdf)
     timedata = cftime.date2num(ds['time'].values, units,
