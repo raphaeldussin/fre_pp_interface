@@ -138,7 +138,7 @@ sp.check_call(create_dmget_string(files_6), shell=True)
 print("dmget done")
 
 # open all files in a single dataset using time fixes from fre_pp_interface
-ds =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6])
+ds =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6], gaps=[1,1,1,0,0])
 
 # now that we have the time axis concatenated, we can decode it in cftime
 ds = xr.decode_cf(ds)
@@ -149,12 +149,39 @@ last_year = ds.isel(time=-1)['time'].dt.year.values
 dirout = create_out_path(outputdir, stream, cyears)
 sp.check_call(f"mkdir -p {dirout}", shell=True)
 
-# init while loop
-keep_looping = True
-start_year = first_year
+# number of years in each cycle
+nyears_cycles = np.array([60, 60, 60, 61, 61, 61])
+prev_gaps = np.array([0, 1, 1, 1, 0, 0])
 
-while keep_looping:
-    end_year = start_year + nyears_file -1
+# find out how many years are left to add in the last file
+extra_years = np.mod(nyears_cycles, nyears_file)
+# this is how many files to create for this cycle, last one will include extra years
+files_per_cycles = (nyears_cycles - extra_years) / nyears_file
+
+# build start and end dates for each file
+startyears = []
+endyears = []
+
+beginyear = first_year
+
+for cycle in range(6):
+    #print(f"cycle {cycle} will write {int(files_per_cycles[cycle])} files")
+    for nf in range(int(files_per_cycles[cycle])):
+        startyear = beginyear
+        if nf == 0:  # first file account for gap year, if any
+            startyear += prev_gaps[cycle]
+        endyear = startyear + nyears_file -1
+        if nf == files_per_cycles[cycle] -1:  # last file has extra years, if any
+            #print(f"add {extra_years[cycle]} to file {nf+1}")
+            endyear += extra_years[cycle]
+        #print(f"{startyear}-{endyear}")
+        startyears.append(startyear)
+        endyears.append(endyear)
+        # reset beginyear
+        beginyear = endyear + 1
+
+# loop over start and end dates for each file
+for start_year, end_year in zip(startyears, endyears):
 
     print(f"extracting time period {start_year} - {end_year}")
     ds_split = ds.sel(time=slice(str(start_year), str(end_year)))
@@ -166,10 +193,3 @@ while keep_looping:
     # write file
     print(f"writing into file {dirout}/{fout}")
     ds_split.to_netcdf(f"{dirout}/{fout}")
-
-    # test for final segment:
-    if end_year == last_year:
-        keep_looping = False
-    else:
-       # prepare for next iteration
-        start_year = end_year + 1

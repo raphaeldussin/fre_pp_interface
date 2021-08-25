@@ -19,7 +19,7 @@ def merge_2_cycles(files_cycle1, files_cycle2, combine='by_coords'):
     return ds
 
 
-def merge_2_datasets(ds1, ds2, calendar='leap'):
+def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     """ merge 2 datasets into one long """
     # time is given in days since origin
     ndays_cycle1 = ds1['time'][-1].values - ds1['time'][0].values
@@ -46,7 +46,7 @@ def merge_2_datasets(ds1, ds2, calendar='leap'):
     # set the new origin the past
     #origin = origin_cycle1 - dt.timedelta(days=ndpy*(nyears_cycle2))
     #origin = origin_cycle1 - dt.timedelta(days=ndays_cycle2+ndpy)
-    offset_years = origin_cycle1.year + nyears_cycle1 - origin_cycle2.year
+    offset_years = origin_cycle1.year + nyears_cycle1 - origin_cycle2.year + gap
     #origin = origin_cycle1 - dt.timedelta(days=(ndpy*offset_years)+1)
     new_year_start = int(origin_cycle1.year - offset_years)
     origin =dt.datetime(new_year_start,1,1,0,0,0)
@@ -59,7 +59,7 @@ def merge_2_datasets(ds1, ds2, calendar='leap'):
     # cycle2 uses the same updated origin but also needs to have its values
     # shifted nyears_cycle1 in the future
     #ds2['time'] = cftime.num2date(ds2['time'].values + ndays_cycle1 + ndpy,
-    ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1)*ndpy,
+    ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1+gap)*ndpy,
                                   units, calendar=calendar_cycle1)
     # we can now concatenate the datasets
     #print('concatenate')
@@ -76,14 +76,20 @@ def merge_2_datasets(ds1, ds2, calendar='leap'):
     return ds
 
 
-def merge_cycles(list_of_cycles, combine='by_coords'):
-    """ recursively call merge_2_cycles """
+def merge_cycles(list_of_cycles, combine='by_coords', gaps=None):
+    """ recursively call merge_2_cycles
+
+    gaps = list of gap year (e.g. 1) between cycles
+    """
     if combine == 'nested':
         kwargs = {'concat_dim': 'time'}
     else:
         kwargs = {}
     # loop from the end of list
     ncycles = len(list_of_cycles)
+    if gaps is not None:
+        assert len(gaps) == ncycles -1
+
 #    # init to last cycle
 #    dsend = xr.open_mfdataset(list_of_cycles[-1], combine=combine,
 #                              decode_times=False, **kwargs)
@@ -97,10 +103,14 @@ def merge_cycles(list_of_cycles, combine='by_coords'):
     dsstart = xr.open_mfdataset(list_of_cycles[0], combine=combine,
                                 decode_times=False, **kwargs)
     for cycle in np.arange(1,ncycles):
-        print(f'merge with cycle {cycle} of {ncycles}')
         dsend = xr.open_mfdataset(list_of_cycles[cycle], combine=combine,
                                   decode_times=False, **kwargs)
         # merge
-        dsstart = merge_2_datasets(dsstart, dsend)
+        if gaps is not None:
+            print(f'merge with cycle {cycle} of {ncycles} with {gaps[cycle-1]} gap year')
+            dsstart = merge_2_datasets(dsstart, dsend, gap=gaps[cycle-1])
+        else:
+            print(f'merge with cycle {cycle} of {ncycles}')
+            dsstart = merge_2_datasets(dsstart, dsend)
 
     return dsstart
