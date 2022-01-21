@@ -56,11 +56,26 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     # cycle1 values remains the same but the origin is shifted
     ds1['time'] = cftime.num2date(ds1['time'].values, units,
                                   calendar=calendar_cycle1)
+    tmp1_avgT1 = cftime.num2date(ds1['average_T1'].values, units,
+                                calendar=calendar_cycle1)
+    tmp1_avgT2 = cftime.num2date(ds1['average_T2'].values, units,
+                                calendar=calendar_cycle1)
+    tmp1_bnds = cftime.num2date(ds1['time_bnds'].values, units,
+                                calendar=calendar_cycle1)
+
+
     # cycle2 uses the same updated origin but also needs to have its values
     # shifted nyears_cycle1 in the future
     #ds2['time'] = cftime.num2date(ds2['time'].values + ndays_cycle1 + ndpy,
     ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1+gap)*ndpy,
                                   units, calendar=calendar_cycle1)
+    tmp2_avgT1 = cftime.num2date(ds2['average_T1'].values + (nyears_cycle1+gap)*ndpy,
+                                  units, calendar=calendar_cycle1)
+    tmp2_avgT2 = cftime.num2date(ds2['average_T2'].values + (nyears_cycle1+gap)*ndpy,
+                                  units, calendar=calendar_cycle1)
+    tmp2_bnds = cftime.num2date(ds2['time_bnds'].values + (nyears_cycle1+gap)*ndpy,
+                                  units, calendar=calendar_cycle1)
+
     # we can now concatenate the datasets
     #print('concatenate')
     #print(origin)
@@ -71,7 +86,31 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     timedata = cftime.date2num(ds['time'].values, units,
                                calendar=calendar_cycle1)
 
-    ds['time'] = xr.DataArray(data=timedata, attrs={'units': units,
+    tmp_avgT1 = np.concatenate((tmp1_avgT1, tmp2_avgT1), axis=0)
+    tmp_avgT2 = np.concatenate((tmp1_avgT2, tmp2_avgT2), axis=0)
+    tmp_bnds = np.concatenate((tmp1_bnds, tmp2_bnds), axis=0)
+
+    avg_T1 = cftime.date2num(tmp_avgT1, units,
+                               calendar=calendar_cycle1)
+    avg_T2 = cftime.date2num(tmp_avgT2, units,
+                               calendar=calendar_cycle1)
+    bnds = cftime.date2num(tmp_bnds, units,
+                           calendar=calendar_cycle1)
+
+    base_attrs = {'units': units, 'calendar': calendar_cycle1}
+    avgT1_attrs = base_attrs.copy()
+    avgT1_attrs.update({"long_name": "Start time for average period"})
+    avgT2_attrs = base_attrs.copy()
+    avgT2_attrs.update({"long_name": "End time for average period"})
+
+    ds['average_T1'] = xr.DataArray(data=avg_T1, attrs=avgT1_attrs, dims='time')
+    ds['average_T2'] = xr.DataArray(data=avg_T2, attrs=avgT2_attrs, dims='time')
+    ds["time_bnds"] = xr.DataArray(data=bnds, attrs=ds1["time_bnds"].attrs, dims=ds1["time_bnds"].dims)
+
+    # this one has to be last
+    ds['time'] = xr.DataArray(data=timedata, attrs={'units': units, 'long_name': 'time',
+                                                    'cartesian_axis': 'T', 'calendar_type': calendar_cycle1,
+                                                    'bounds': "time_bnds",
                                                     'calendar': calendar_cycle1}, dims='time')
     return ds
 

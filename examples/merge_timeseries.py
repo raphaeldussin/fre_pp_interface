@@ -138,10 +138,12 @@ sp.check_call(create_dmget_string(files_6), shell=True)
 print("dmget done")
 
 # open all files in a single dataset using time fixes from fre_pp_interface
-ds =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6], gaps=[1,1,1,0,0])
+ds_raw =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6], gaps=[1,1,1,0,0])
 
 # now that we have the time axis concatenated, we can decode it in cftime
-ds = xr.decode_cf(ds)
+ds = xr.decode_cf(ds_raw, drop_variables=["time_bnds"])
+units = ds_raw["time"].attrs["units"]
+calendar = ds_raw["time"].attrs["calendar"]
 
 first_year = ds.isel(time=0)['time'].dt.year.values
 last_year = ds.isel(time=-1)['time'].dt.year.values
@@ -186,10 +188,25 @@ for start_year, end_year in zip(startyears, endyears):
     print(f"extracting time period {start_year} - {end_year}")
     ds_split = ds.sel(time=slice(str(start_year), str(end_year)))
 
+    # fix _FillValue
+    for kvar in list(ds_split.coords):
+        ds_split[kvar].encoding.update({"_FillValue": None})
+    for kvar in ["average_T1", "average_T2"]:
+        ds_split[kvar].encoding.update({"_FillValue": 1.e+20})
+        ds_split[kvar].attrs.update({"missing_value": 1.e+20})
+
+    # recreate time_bnds due to weird encoding problem
+    ds_split["time_bnds"] = xr.concat([ds_split["average_T1"], ds_split["average_T2"]], dim="nv")
+    ds_split["time_bnds"] = ds_split["time_bnds"].transpose(*('time', 'nv'))
+    ds_split["time_bnds"].attrs.update({"long_name": "time axis boundaries"})
+    ds_split["time_bnds"].encoding.update({"units": units})
+    ds_split["time_bnds"].encoding.update({"calendar": calendar})
+
     # override end_year by last value found for year, only useful for last file
     end_year = int(ds_split.isel(time=-1)['time'].dt.year.values)
     fout = f"{stream}.{start_year}-{end_year}.{var}.nc"
 
     # write file
     print(f"writing into file {dirout}/{fout}")
+    ds_split.attrs["filename"] = f"{fout}"
     ds_split.to_netcdf(f"{dirout}/{fout}")
