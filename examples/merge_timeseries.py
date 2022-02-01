@@ -5,6 +5,8 @@ import fre_pp_interface as pp
 import argparse
 import subprocess as sp
 import numpy as np
+import cftime
+import netCDF4 as nc
 
 
 #-- simple argument parser
@@ -87,6 +89,26 @@ def create_out_path(outputdir, stream, cyears, freq=None):
     return out_path
 
 
+def output_filename(stream, start_year, end_year, var, freq=None):
+
+    dfreq='monthly'
+    if 'annual' in stream:
+        dfreq='annual'
+    elif 'daily' in stream:
+        dfreq='daily'
+    if freq is not None:
+        dfreq=freq
+
+    if dfreq == "annual":
+        fout = f"{stream}.{start_year}-{end_year}.{var}.nc"
+    elif dfreq == "monthly":
+        fout = f"{stream}.{start_year}01-{end_year}12.{var}.nc"
+    elif dfreq == "daily":
+        fout = f"{stream}.{start_year}0101-{end_year}1231.{var}.nc"
+    else:
+        raise ValueError(f"{dfreq} not supported")
+    return fout
+
 # this needs not be changed
 cycle1dir = '/archive/Alistair.Adcroft/xanadu_esm4_20190304_mom6_2019.07.21/OM4p25_JRA55do1.4_0netfw/gfdl.ncrc4-intel16-prod/pp'
 cycle2dir = '/archive/Alistair.Adcroft/xanadu_esm4_20190304_mom6_2019.07.21/OM4p25_JRA55do1.4_0netfw_cycle2/gfdl.ncrc4-intel16-prod/pp'
@@ -138,12 +160,9 @@ sp.check_call(create_dmget_string(files_6), shell=True)
 print("dmget done")
 
 # open all files in a single dataset using time fixes from fre_pp_interface
-ds_raw =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6], gaps=[1,1,1,0,0])
+ds =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6], gaps=[1,1,1,0,0])
 
-# now that we have the time axis concatenated, we can decode it in cftime
-ds = xr.decode_cf(ds_raw, drop_variables=["time_bnds"])
-units = ds_raw["time"].attrs["units"]
-calendar = ds_raw["time"].attrs["calendar"]
+ds = xr.decode_cf(ds)
 
 first_year = ds.isel(time=0)['time'].dt.year.values
 last_year = ds.isel(time=-1)['time'].dt.year.values
@@ -195,18 +214,16 @@ for start_year, end_year in zip(startyears, endyears):
         ds_split[kvar].encoding.update({"_FillValue": 1.e+20})
         ds_split[kvar].attrs.update({"missing_value": 1.e+20})
 
-    # recreate time_bnds due to weird encoding problem
-    ds_split["time_bnds"] = xr.concat([ds_split["average_T1"], ds_split["average_T2"]], dim="nv")
-    ds_split["time_bnds"] = ds_split["time_bnds"].transpose(*('time', 'nv'))
-    ds_split["time_bnds"].attrs.update({"long_name": "time axis boundaries"})
-    ds_split["time_bnds"].encoding.update({"units": units})
-    ds_split["time_bnds"].encoding.update({"calendar": calendar})
-
-    # override end_year by last value found for year, only useful for last file
-    end_year = int(ds_split.isel(time=-1)['time'].dt.year.values)
-    fout = f"{stream}.{start_year}-{end_year}.{var}.nc"
+    fout = output_filename(stream, start_year, end_year, var, freq)
 
     # write file
     print(f"writing into file {dirout}/{fout}")
     ds_split.attrs["filename"] = f"{fout}"
-    ds_split.to_netcdf(f"{dirout}/{fout}")
+    ds_split.to_netcdf(f"{dirout}/{fout}", unlimited_dims="time")
+
+    # xarray uses bounds attribute of time to define attrs of time_bnds
+    # hence messing up our attrs. So we add this attribute in a "append" call
+    # using low level netcdf
+    f = nc.Dataset(f"{dirout}/{fout}", "a")
+    f.variables["time"].setncattr("bounds", "time_bnds")
+    f.close()

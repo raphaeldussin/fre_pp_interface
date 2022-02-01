@@ -105,13 +105,22 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
 
     ds['average_T1'] = xr.DataArray(data=avg_T1, attrs=avgT1_attrs, dims='time')
     ds['average_T2'] = xr.DataArray(data=avg_T2, attrs=avgT2_attrs, dims='time')
+
     ds["time_bnds"] = xr.DataArray(data=bnds, attrs=ds1["time_bnds"].attrs, dims=ds1["time_bnds"].dims)
+    ds["time_bnds"].attrs.update({"long_name": "time axis boundaries"})
+    ds["time_bnds"].attrs.update({"units": units})
+    ds["time_bnds"].attrs.update({"calendar": calendar_cycle1})
+    ds["time_bnds"].encoding.update({"_FillValue": 1.0e+20})
+
+    ds["nv"] = ds1["nv"].copy(deep=True)
 
     # this one has to be last
+    # xarray tries to outsmart the attributes when bounds exists, will have to add it at the end
     ds['time'] = xr.DataArray(data=timedata, attrs={'units': units, 'long_name': 'time',
                                                     'cartesian_axis': 'T', 'calendar_type': calendar_cycle1,
-                                                    'bounds': "time_bnds",
+                                                    #'bounds': "time_bnds",
                                                     'calendar': calendar_cycle1}, dims='time')
+
     return ds
 
 
