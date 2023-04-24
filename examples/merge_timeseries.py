@@ -213,6 +213,10 @@ for start_year, end_year in zip(startyears, endyears):
     for kvar in ["average_T1", "average_T2"]:
         ds_split[kvar].encoding.update({"_FillValue": 1.e+20})
         ds_split[kvar].attrs.update({"missing_value": 1.e+20})
+    if "lon_bnds" in list(ds.variables):
+        ds_split["lon_bnds"].encoding.update({"_FillValue": 1.e+20})
+    if "lat_bnds" in list(ds.variables):
+        ds_split["lat_bnds"].encoding.update({"_FillValue": 1.e+20})
 
     fout = output_filename(stream, start_year, end_year, var, freq)
 

@@ -81,7 +81,7 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     #print(origin)
     #print(ds1['time'].min(), ds1['time'].max())
     #print(ds2['time'].min(), ds2['time'].max())
-    ds = xr.concat([ds1, ds2], dim='time')
+    ds = xr.concat([ds1, ds2], dim='time', data_vars="minimal")
     # finally re-encode the time variable (else get garbage in output netcdf)
     timedata = cftime.date2num(ds['time'].values, units,
                                calendar=calendar_cycle1)
@@ -112,7 +112,8 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     ds["time_bnds"].attrs.update({"calendar": calendar_cycle1})
     ds["time_bnds"].encoding.update({"_FillValue": 1.0e+20})
 
-    ds["nv"] = ds1["nv"].copy(deep=True)
+    if "nv" in list(ds.variables):
+        ds["nv"] = ds1["nv"].copy(deep=True)
 
     # this one has to be last
     # xarray tries to outsmart the attributes when bounds exists, will have to add it at the end
@@ -133,6 +134,10 @@ def merge_cycles(list_of_cycles, combine='by_coords', gaps=None):
         kwargs = {'concat_dim': 'time'}
     else:
         kwargs = {}
+    kwargs.update({"coords": "minimal"})
+    kwargs.update({"data_vars": "minimal"})
+    kwargs.update({"compat": "override"})
+
     # loop from the end of list
     ncycles = len(list_of_cycles)
     if gaps is not None:
@@ -150,6 +155,7 @@ def merge_cycles(list_of_cycles, combine='by_coords', gaps=None):
     # init to the first cycle
     dsstart = xr.open_mfdataset(list_of_cycles[0], combine=combine,
                                 decode_times=False, **kwargs)
+
     for cycle in np.arange(1,ncycles):
         dsend = xr.open_mfdataset(list_of_cycles[cycle], combine=combine,
                                   decode_times=False, **kwargs)
