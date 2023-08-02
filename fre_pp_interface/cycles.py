@@ -25,10 +25,10 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     ndays_cycle1 = ds1['time'][-1].values - ds1['time'][0].values
     ndays_cycle2 = ds2['time'][-1].values - ds2['time'][0].values
     # we always come short of the last year
-    if calendar == 'leap':
-        ndpy=365.25
-    elif calendar == 'noleap':
-        ndpy=365.
+    #if calendar == 'leap':
+    #    ndpy=365.25
+    #elif calendar == 'noleap':
+    ndpy=365.
 
     nyears_cycle1 = np.floor(ndays_cycle1/ndpy + 1)
     nyears_cycle2 = np.floor(ndays_cycle2/ndpy + 1)
@@ -67,14 +67,25 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     # cycle2 uses the same updated origin but also needs to have its values
     # shifted nyears_cycle1 in the future
     #ds2['time'] = cftime.num2date(ds2['time'].values + ndays_cycle1 + ndpy,
-    ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1+gap)*ndpy,
-                                  units, calendar=calendar_cycle1)
-    tmp2_avgT1 = cftime.num2date(ds2['average_T1'].values + (nyears_cycle1+gap)*ndpy,
-                                  units, calendar=calendar_cycle1)
-    tmp2_avgT2 = cftime.num2date(ds2['average_T2'].values + (nyears_cycle1+gap)*ndpy,
-                                  units, calendar=calendar_cycle1)
-    tmp2_bnds = cftime.num2date(ds2['time_bnds'].values + (nyears_cycle1+gap)*ndpy,
-                                  units, calendar=calendar_cycle1)
+    if calendar == 'leap':
+        ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4),
+                                      units, calendar=calendar_cycle1)
+        tmp2_avgT1 = cftime.num2date(ds2['average_T1'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4),
+                                      units, calendar=calendar_cycle1)
+        tmp2_avgT2 = cftime.num2date(ds2['average_T2'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4),
+                                      units, calendar=calendar_cycle1)
+        tmp2_bnds = cftime.num2date(ds2['time_bnds'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4),
+                                      units, calendar=calendar_cycle1)
+
+    else:
+        ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1+gap)*ndpy,
+                                      units, calendar=calendar_cycle1)
+        tmp2_avgT1 = cftime.num2date(ds2['average_T1'].values + (nyears_cycle1+gap)*ndpy,
+                                      units, calendar=calendar_cycle1)
+        tmp2_avgT2 = cftime.num2date(ds2['average_T2'].values + (nyears_cycle1+gap)*ndpy,
+                                      units, calendar=calendar_cycle1)
+        tmp2_bnds = cftime.num2date(ds2['time_bnds'].values + (nyears_cycle1+gap)*ndpy,
+                                      units, calendar=calendar_cycle1)
 
     # we can now concatenate the datasets
     #print('concatenate')
