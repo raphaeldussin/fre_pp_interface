@@ -172,7 +172,8 @@ sp.check_call(f"mkdir -p {dirout}", shell=True)
 
 # number of years in each cycle
 nyears_cycles = np.array([60, 60, 60, 61, 61, 61])
-prev_gaps = np.array([0, 1, 1, 1, 0, 0])
+#prev_gaps = np.array([0, 1, 1, 1, 0, 0])
+prev_gaps = np.array([0, 0, 0, 0, 3, 3])
 
 # find out how many years are left to add in the last file
 extra_years = np.mod(nyears_cycles, nyears_file)
