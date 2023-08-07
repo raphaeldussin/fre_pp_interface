@@ -68,13 +68,13 @@ def merge_2_datasets(ds1, ds2, calendar='leap', gap=0):
     # shifted nyears_cycle1 in the future
     #ds2['time'] = cftime.num2date(ds2['time'].values + ndays_cycle1 + ndpy,
     if calendar == 'leap':
-        ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4),
+        ds2['time'] = cftime.num2date(ds2['time'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4)[0],
                                       units, calendar=calendar_cycle1)
-        tmp2_avgT1 = cftime.num2date(ds2['average_T1'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4),
+        tmp2_avgT1 = cftime.num2date(ds2['average_T1'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4)[0],
                                       units, calendar=calendar_cycle1)
-        tmp2_avgT2 = cftime.num2date(ds2['average_T2'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4),
+        tmp2_avgT2 = cftime.num2date(ds2['average_T2'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4)[0],
                                       units, calendar=calendar_cycle1)
-        tmp2_bnds = cftime.num2date(ds2['time_bnds'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4),
+        tmp2_bnds = cftime.num2date(ds2['time_bnds'].values + (nyears_cycle1+gap)*ndpy + np.divmod(nyears_cycle1+gap, 4)[0],
                                       units, calendar=calendar_cycle1)
 
     else:
