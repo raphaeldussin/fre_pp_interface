@@ -225,7 +225,7 @@ for start_year, end_year in zip(startyears, endyears):
     # write file
     print(f"writing into file {dirout}/{fout}")
     ds_split.attrs["filename"] = f"{fout}"
-    ds_split.to_netcdf(f"{dirout}/{fout}", unlimited_dims="time")
+    ds_split.to_netcdf(f"{dirout}/{fout}", unlimited_dims="time", format="NETCDF3_64BIT")
 
     # xarray uses bounds attribute of time to define attrs of time_bnds
     # hence messing up our attrs. So we add this attribute in a "append" call
