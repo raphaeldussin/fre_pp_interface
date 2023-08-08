@@ -160,9 +160,9 @@ sp.check_call(create_dmget_string(files_6), shell=True)
 print("dmget done")
 
 # open all files in a single dataset using time fixes from fre_pp_interface
-ds =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6], gaps=[1,1,1,0,0])
+ds =  pp.merge_cycles([files_1, files_2, files_3, files_4,files_5, files_6], gaps=[0,0,0,3,3])
 
-ds = xr.decode_cf(ds)
+ds = xr.decode_cf(ds, decode_timedelta=False)
 
 first_year = ds.isel(time=0)['time'].dt.year.values
 last_year = ds.isel(time=-1)['time'].dt.year.values
@@ -172,7 +172,6 @@ sp.check_call(f"mkdir -p {dirout}", shell=True)
 
 # number of years in each cycle
 nyears_cycles = np.array([60, 60, 60, 61, 61, 61])
-#prev_gaps = np.array([0, 1, 1, 1, 0, 0])
 prev_gaps = np.array([0, 0, 0, 0, 3, 3])
 
 # find out how many years are left to add in the last file
@@ -211,9 +210,11 @@ for start_year, end_year in zip(startyears, endyears):
     # fix _FillValue
     for kvar in list(ds_split.coords):
         ds_split[kvar].encoding.update({"_FillValue": None})
-    for kvar in ["average_T1", "average_T2"]:
-        ds_split[kvar].encoding.update({"_FillValue": 1.e+20})
-        ds_split[kvar].attrs.update({"missing_value": 1.e+20})
+    for kvar in ["average_T1", "average_T2", "time_bnds"]:
+        fillval = cftime.date2num(cftime.DatetimeJulian(1599,12,31),
+                                  "days since 1600-01-01T0:00:00", calendar="julian")
+        ds_split[kvar].encoding.update({"dtype": np.float64, "_FillValue": fillval})
+        ds_split[kvar].attrs.update({"missing_value": fillval})
     if "lon_bnds" in list(ds.variables):
         ds_split["lon_bnds"].encoding.update({"_FillValue": 1.e+20})
     if "lat_bnds" in list(ds.variables):
